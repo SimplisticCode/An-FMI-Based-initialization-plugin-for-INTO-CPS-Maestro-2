@@ -68,7 +68,7 @@ Casper Thule\inst{1}}
 In this section, we provide a formalization of FMI co-simulation and a short background on Maestro 2.
 
 \subsection{FMU definitions}
-To describe the formalization of FMUs the vocabulary is adopted by Gomes et al\cite{gomes_lucio_vangheluwe_2019, Gomes2018}. The main definitions of relevance to this paper will be presented, but for more information readers are referred to the original publications. 
+To describe the formalization of FMUs the vocabulary from Gomes et al\cite{gomes_lucio_vangheluwe_2019, Gomes2018} is adopted. The main definitions of relevance to this paper will be presented, but for more information readers are referred to the original publications. 
 \begin{definition}[FMU]\label{def:fmu}
   An FMU with identifier $c$ is represented by the tuple   
   $$\tuple{\stateset{c}, \inputs{c}, \outputs{c}, \fset{c}, \fget{c}},$$
@@ -97,7 +97,7 @@ The $\fget{c}(\dontcare, \outputvar{c})$ represents the calculation of output $\
 \end{definition}
 
 \begin{definition}[Input Computation]\label{def:setin}
-The $\fset{c}(\dontcare, \inputvar{c}, \inputV)$ represents the setting of input $\inputvar{c}$  of $c \in \fmus$. Given a co-simulation state, it checks whether all outputs connected to I are defined.
+The $\fset{c}(\dontcare, \inputvar{c}, \inputV)$ represents the setting of input $\inputvar{c}$  of $c \in \fmus$. Given a co-simulation state, it checks whether all outputs connected to $\inputvar{c}$ are defined.
 \end{definition}
 
 \subsection{INTO-CPS Maestro 2}
@@ -117,7 +117,7 @@ The calculation of the initialization order is linear in the number of both exte
 
 
 \subsection{Structure of the graph}
-The graph is constructed based on the interconnected variables and internal connections. Each interconnected variable in the system represents a node, and the edges are based on these connections. The edges of this graph represent precedence constraints based on the algebraic dependencies of the interconnected variables. 
+The graph is constructed based on the interconnected variables and internal connections. Each interconnected variable in the system represents a node, and the edges are based on these connections. The edges of this graph represent precedence constraints based on the algebraic dependencies of the interconnected variables. Please see definition \ref{def:initialization_graph} for a formal definition of the graph.
 
 \begin{definition}[Initialization Graph]\label{def:initialization_graph}
   Given a co-simulation scenario $\tuple{\fmus, \coupling}$, and a set of feed-through dependencies $\bigcup_{c \in \fmus} \set{\feedthrough{c}}$, we define the initialization graph where each node represents a port $\outputvar{c} \in \outputs{c}$ or $\inputvar{c} \in \inputs{c}$ of some fmu $c \in \fmus$. The edges are created according to the following rules:
@@ -127,8 +127,8 @@ The graph is constructed based on the interconnected variables and internal conn
   \end{compactenum}
 \end{definition}
 
-\subsection{Single water tank example}
-The structure of the Initialization graph will be described using a small example. This is based on a single water-tank where the water level of the tank is controlled by a discrete-event controller. When the water level of the tank reaches a particular level (defined in the controller) the controller sends a command to the tank to empty using an exit valve. An illustration and a diagram of the interconnections of the ports in the system can be in figure \ref{fig:watertank}.
+\subsection{Single Water Tank Example}
+The structure of the Initialization Graph will be described using a small example. This is based on a single water-tank where the water level of the tank is controlled by a discrete-event controller. When the water level of the tank reaches a particular level (defined in the controller) the controller sends a command to the tank to empty using an exit valve. An illustration and a diagram of the interconnections of the ports in the system can be in figure \ref{fig:watertank}.
 
 \begin{figure}[H]
     \centering
@@ -140,31 +140,32 @@ The structure of the Initialization graph will be described using a small exampl
         \centering
     \includegraphics[width=1\textwidth]{images/waterTankFMU-Page-1.pdf}
     \end{minipage}
-    \caption{Single water-tank case study}
+    \caption{Single water tank case study}
     \label{fig:watertank}
 \end{figure}
 
 
-\begin{wrapfigure}[6]{r}{0.4\textwidth}
+\begin{wrapfigure}[7]{r}{0.4\textwidth}
   \begin{center}
   \includegraphics[width=0.30\textwidth]{images/InitializationGraph.pdf}
   \end{center}
     \caption{Initialization graph of water-tank}
   \label{fig:initilizationGraph}
 \end{wrapfigure}
-\noindent A correct initialization order can be calculated since there is no circular dependencies. The initialization graph of the system can be seen in figure \ref{fig:initilizationGraph}. The correct order of initialization can easily be seen from the figure. But this approach also scales.% to more advanced examples like the Line Follower Robot \footnote{\url{https://github.com/INTO-CPS-Association/example-line_follower_robot}}.
+\noindent A correct initialization order can be calculated since there are no circular dependencies. The Initialization Graph of the system can be seen in figure \ref{fig:initilizationGraph}. The correct order of initialization is trivial in this simple example, with only two FMUs and three connections. Still, the approach scales to more complex systems with more FMUs and connections.% to more advanced examples like the Line Follower Robot \footnote{\url{https://github.com/INTO-CPS-Association/example-line_follower_robot}}.
 %However, knowledge about the internals of the system is needed in order to calculate this because if we treated the system as a black-box, we would not have taken the internal connection of \textit{WT} into account. An incorrect initialization order could, therefore, have been derived without some knowledge about the feed-through dependencies in the system.  
 \newline
 \newline
 \newline
 \newline
 \section{Realization of a Maestro 2 Plugin}\label{sc:implementation}
-This approach has been realized as a Maestro 2 plugin that generates the \textit{Initialization}-phase of a co-simulation specification expressed in MaBL. It calculates the specification on a list of FMU-components, information of the simulation environment, and specific plugin-configurations describing the connections between interconnected variables. The plugin uses a optimization to group operations that can be executed in parallel to take advantage of FMI's ability to set/get multiple variables in bulk.
-The developed plugin has been tested on numerous co-simulation examples and checked against the existing \textit{Initializer} of Maestro.
+This approach has been realized as a Maestro 2 plugin that generates the \textit{Initialization}-phase of a co-simulation specification expressed in MaBL. It calculates the specification on a list of FMU-components, information of the simulation environment, and a specific plugin-configuration with user supplied parameters for the initial value of variables with $causality=parameter$. The plugin uses a optimization to group operations that can be executed in parallel to take advantage of FMI's ability to set/get multiple variables in bulk.
+The developed plugin has been tested on numerous co-simulation examples and checked against the existing \textit{Initializer} of Maestro. The plugin furthermore has an integration, controlled by a configuration parameter, to verify the calculated initialization order against the Prolog code by Gomes et al. \cite{gomes_lucio_vangheluwe_2019}. 
+
 
 The topological sorting algorithm was implemented in Scala. The choice of Scala is motivated by the relation to JVM and the connection to Slang and the Logika framework\cite{inbook}. The connection to Slang and Logika will be used in the future work of formally verifying the plugin.
 
-The algorithm for calculating the topological order of the Initialization graph defined in definition \ref{def:initialization_graph} was Tarjan's algorithm. The algorithm was chosen because it solves two of the central issues of the initialization of a co-simulation - identifying circular dependencies (strongly connected components) and performing a topological sorting \cite{tarjan_1972}. The algorithm is furthermore well-established, and there exist formal proofs of its correctness and properties\cite{stefan_merz}. 
+The algorithm for calculating the topological order of the Initialization Graph defined in definition \ref{def:initialization_graph} is Tarjan's algorithm. The algorithm was selected because it solves two of the central issues of the initialization of a co-simulation - identifying circular dependencies (strongly connected components) and performing a topological sorting \cite{tarjan_1972}. The algorithm is furthermore well-established, and there exist formal proofs of its correctness and properties\cite{stefan_merz}. 
 
 
 \input{conclusion.tex}
